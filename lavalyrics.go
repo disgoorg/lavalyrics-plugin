@@ -8,95 +8,102 @@ import (
 	"github.com/disgoorg/disgolink/v4/disgolink"
 	"github.com/disgoorg/disgolink/v4/lavalink"
 	"github.com/disgoorg/json/v2"
-	"github.com/disgoorg/snowflake/v2"
 )
 
-type Lyrics struct {
-	SourceName string           `json:"sourceName"`
-	Provider   string           `json:"provider"`
-	Text       string           `json:"text"`
-	Lines      []Line           `json:"lines"`
-	Plugin     lavalink.RawData `json:"plugin"`
+var (
+	_ disgolink.EventPlugins = (*Plugin)(nil)
+	_ disgolink.Plugin       = (*Plugin)(nil)
+)
+
+func New() *Plugin {
+	return NewWithLogger(slog.Default())
 }
 
-type Line struct {
-	Timestamp lavalink.Duration `json:"timestamp"`
-	Duration  lavalink.Duration `json:"duration"`
-	Line      string            `json:"line"`
-	Plugin    lavalink.RawData  `json:"plugin"`
+func NewWithLogger(logger *slog.Logger) *Plugin {
+	return &Plugin{
+		eventPlugins: []disgolink.EventPlugin{
+			&lyricsFoundHandler{
+				logger: logger,
+			},
+			&lyricsNotFoundHandler{
+				logger: logger,
+			},
+			&lyricsLineHandler{
+				logger: logger,
+			},
+		},
+	}
 }
 
-// GetCurrentTrackLyrics returns the lyrics of the current track being played in the guild.
-// If the current track has no lyrics, it will return nil.
-func GetCurrentTrackLyrics(ctx context.Context, client disgolink.RestClient, sessionID string, guildID snowflake.ID, skipTrackSource bool) (*Lyrics, error) {
-	rq, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/v4/sessions/%s/players/%s/track/lyrics", sessionID, guildID), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	q := rq.URL.Query()
-	q.Add("skipTrackSource", fmt.Sprint(skipTrackSource))
-	rq.URL.RawQuery = q.Encode()
-
-	rs, err := client.Do(rq)
-	if err != nil {
-		return nil, err
-	}
-	defer rs.Body.Close()
-
-	if rs.StatusCode < 200 || rs.StatusCode >= 300 {
-		var lavalinkError lavalink.Error
-		if err = json.NewDecoder(rs.Body).Decode(&lavalinkError); err != nil {
-			return nil, err
-		}
-		return nil, lavalinkError
-	}
-
-	if rs.StatusCode == http.StatusNoContent {
-		return nil, nil
-	}
-
-	var l Lyrics
-	if err = json.NewDecoder(rs.Body).Decode(&l); err != nil {
-		return nil, err
-	}
-	return &l, nil
+type Plugin struct {
+	eventPlugins []disgolink.EventPlugin
 }
 
-// GetLyrics returns the lyrics of the provided track.
-// If the track has no lyrics, it will return nil.
-func GetLyrics(ctx context.Context, client disgolink.RestClient, track string, skipTrackSource bool) (*Lyrics, error) {
-	rq, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/v4/lyrics"), nil)
-	if err != nil {
-		return nil, err
+func (p *Plugin) EventPlugins() []disgolink.EventPlugin {
+	return p.eventPlugins
+}
+
+func (p *Plugin) Name() string {
+	return "lavalyrics"
+}
+
+func (p *Plugin) Version() string {
+	return "1.0.0"
+}
+
+var _ disgolink.EventPlugin = (*lyricsFoundHandler)(nil)
+
+type lyricsFoundHandler struct {
+	logger *slog.Logger
+}
+
+func (h *lyricsFoundHandler) Event() lavalink.EventType {
+	return EventTypeLyricsFound
+}
+func (h *lyricsFoundHandler) OnEventInvocation(player disgolink.Player, data []byte) {
+	var e LyricsFoundEvent
+	if err := json.Unmarshal(data, &e); err != nil {
+		h.logger.Error("Failed to unmarshal LyricsFoundEvent", slog.Any("err", err))
+		return
 	}
 
-	q := rq.URL.Query()
-	q.Add("track", track)
-	q.Add("skipTrackSource", fmt.Sprint(skipTrackSource))
-	rq.URL.RawQuery = q.Encode()
+	player.Lavalink().EmitEvent(player, e)
+}
 
-	rs, err := client.Do(rq)
-	if err != nil {
-		return nil, err
-	}
-	defer rs.Body.Close()
+var _ disgolink.EventPlugin = (*lyricsNotFoundHandler)(nil)
 
-	if rs.StatusCode < 200 || rs.StatusCode >= 300 {
-		var lavalinkError lavalink.Error
-		if err = json.NewDecoder(rs.Body).Decode(&lavalinkError); err != nil {
-			return nil, err
-		}
-		return nil, lavalinkError
-	}
+type lyricsNotFoundHandler struct {
+	logger *slog.Logger
+}
 
-	if rs.StatusCode == http.StatusNoContent {
-		return nil, nil
+func (h *lyricsNotFoundHandler) Event() lavalink.EventType {
+	return EventTypeLyricsNotFound
+}
+
+func (h *lyricsNotFoundHandler) OnEventInvocation(player disgolink.Player, data []byte) {
+	var e LyricsNotFoundEvent
+	if err := json.Unmarshal(data, &e); err != nil {
+		h.logger.Error("Failed to unmarshal LyricsNotFoundEvent", err)
+		return
 	}
 
-	var l Lyrics
-	if err = json.NewDecoder(rs.Body).Decode(&l); err != nil {
-		return nil, err
+	player.Lavalink().EmitEvent(player, e)
+}
+
+type lyricsLineHandler struct {
+	logger *slog.Logger
+}
+
+func (h *lyricsLineHandler) Event() lavalink.EventType {
+	return EventTypeLyricsLine
+}
+
+func (h *lyricsLineHandler) OnEventInvocation(player disgolink.Player, data []byte) {
+	var e LyricsLineEvent
+	if err := json.Unmarshal(data, &e); err != nil {
+		h.logger.Error("Failed to unmarshal LyricsLineEvent", err)
+		return
 	}
-	return &l, nil
+
+	player.Lavalink().EmitEvent(player, e)
 }
