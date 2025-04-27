@@ -2,12 +2,12 @@ package lavalyrics
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/disgoorg/disgolink/v3/disgolink"
-	"github.com/disgoorg/disgolink/v3/lavalink"
+	"github.com/disgoorg/disgolink/v4/disgolink"
+	"github.com/disgoorg/disgolink/v4/lavalink"
+	"github.com/disgoorg/json/v2"
 	"github.com/disgoorg/snowflake/v2"
 )
 
