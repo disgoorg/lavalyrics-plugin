@@ -101,6 +101,7 @@ func GetLyrics(ctx context.Context, client disgolink.RestClient, track string, s
 	return &l, nil
 }
 
+// SubscribeLyrics subscribes to lyrics updates for the specified guild.
 func SubscribeLyrics(ctx context.Context, client disgolink.RestClient, sessionID string, guildID snowflake.ID) error {
 	rq, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("/v4/sessions/%s/players/%s/lyrics/subscribe", sessionID, guildID), nil)
 	if err != nil {
@@ -124,6 +125,7 @@ func SubscribeLyrics(ctx context.Context, client disgolink.RestClient, sessionID
 	return nil
 }
 
+// UnsubscribeLyrics unsubscribes from lyrics updates for the specified guild.
 func UnsubscribeLyrics(ctx context.Context, client disgolink.RestClient, sessionID string, guildID snowflake.ID) error {
 	rq, err := http.NewRequestWithContext(ctx, http.MethodDelete, fmt.Sprintf("/v4/sessions/%s/players/%s/lyrics/subscribe", sessionID, guildID), nil)
 	if err != nil {

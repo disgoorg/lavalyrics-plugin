@@ -1,13 +1,11 @@
 package lavalyrics
 
 import (
-	"context"
-	"fmt"
-	"net/http"
+	"log/slog"
 
-	"github.com/disgoorg/disgolink/v4/disgolink"
-	"github.com/disgoorg/disgolink/v4/lavalink"
-	"github.com/disgoorg/json/v2"
+	"github.com/disgoorg/disgolink/v3/disgolink"
+	"github.com/disgoorg/disgolink/v3/lavalink"
+	"github.com/disgoorg/json"
 )
 
 var (

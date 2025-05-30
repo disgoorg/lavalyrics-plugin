@@ -19,7 +19,8 @@ type LavaLyricsEventListener interface {
 }
 
 type LyricsFoundEvent struct {
-	GuildID_ snowflake.ID `json:"guild_id"`
+	GuildID_ snowflake.ID `json:"guildId"`
+	Lyrics   Lyrics       `json:"lyrics"`
 }
 
 func (LyricsFoundEvent) Op() lavalink.Op {
@@ -35,7 +36,7 @@ func (e LyricsFoundEvent) GuildID() snowflake.ID {
 }
 
 type LyricsNotFoundEvent struct {
-	GuildID_ snowflake.ID `json:"guild_id"`
+	GuildID_ snowflake.ID `json:"guildId"`
 }
 
 func (LyricsNotFoundEvent) Op() lavalink.Op {
@@ -51,8 +52,10 @@ func (e LyricsNotFoundEvent) GuildID() snowflake.ID {
 }
 
 type LyricsLineEvent struct {
-	GuildID_ snowflake.ID `json:"guild_id"`
-	Line     Line         `json:"line"`
+	GuildID_  snowflake.ID `json:"guildId"`
+	LineIndex int          `json:"lineIndex"`
+	Line      Line         `json:"line"`
+	Skipped   bool         `json:"skipped"`
 }
 
 func (LyricsLineEvent) Op() lavalink.Op {
