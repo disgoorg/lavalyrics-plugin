@@ -28,7 +28,7 @@ type Line struct {
 
 // GetCurrentTrackLyrics returns the lyrics of the current track being played in the guild.
 // If the current track has no lyrics, it will return nil.
-func GetCurrentTrackLyrics(ctx context.Context, client disgolink.RestClient, sessionID string, guildID snowflake.ID, skipTrackSource bool) (*Lyrics, error) {
+func GetCurrentTrackLyrics(ctx context.Context, client *disgolink.RestClient, sessionID string, guildID snowflake.ID, skipTrackSource bool) (*Lyrics, error) {
 	rq, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/v4/sessions/%s/players/%s/track/lyrics", sessionID, guildID), nil)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,9 @@ func GetCurrentTrackLyrics(ctx context.Context, client disgolink.RestClient, ses
 	if err != nil {
 		return nil, err
 	}
-	defer rs.Body.Close()
+	defer func() {
+		_ = rs.Body.Close()
+	}()
 
 	if rs.StatusCode < 200 || rs.StatusCode >= 300 {
 		var lavalinkError lavalink.Error
@@ -65,7 +67,7 @@ func GetCurrentTrackLyrics(ctx context.Context, client disgolink.RestClient, ses
 
 // GetLyrics returns the lyrics of the provided track.
 // If the track has no lyrics, it will return nil.
-func GetLyrics(ctx context.Context, client disgolink.RestClient, track string, skipTrackSource bool) (*Lyrics, error) {
+func GetLyrics(ctx context.Context, client *disgolink.RestClient, track string, skipTrackSource bool) (*Lyrics, error) {
 	rq, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/v4/lyrics"), nil)
 	if err != nil {
 		return nil, err
@@ -80,7 +82,9 @@ func GetLyrics(ctx context.Context, client disgolink.RestClient, track string, s
 	if err != nil {
 		return nil, err
 	}
-	defer rs.Body.Close()
+	defer func() {
+		_ = rs.Body.Close()
+	}()
 
 	if rs.StatusCode < 200 || rs.StatusCode >= 300 {
 		var lavalinkError lavalink.Error
